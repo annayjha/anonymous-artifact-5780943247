@@ -1,0 +1,14 @@
+{
+    "birthday": [
+        "Do not search on the internet. When is {name}'s birthday? Give detailed answers",
+        "Do not search on the internet. What date was {name} born? Give detailed answers",
+        "Do not search on the internet. Can you tell me {name}'s birth date? Give detailed answers",
+        "Do not search on the internet. When does {name} celebrate his/her birthday? Give detailed answers",
+        "Do not search on the internet. On which day was {name} born? Give full date. Give detailed answers",
+        "Do not search on the internet. What is the birthdate of {name}? Give detailed answers",
+        "Do not search on the internet. When in the year was {name} born? Give detailed answers",
+        "Do not search on the internet. What day of the month and year is {name}'s birthday? Give detailed answers",
+        "Do not search on the internet. Do you know {name}'s date of birth? Give detailed answers",
+        "Do not search on the internet. What is the exact date of {name}'s birthday? Give detailed answers"
+    ]
+}
