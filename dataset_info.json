@@ -1,0 +1,11 @@
+{
+  "whiteout_sample": {
+    "file_name": "whiteout_sample.json",
+    "formatting": "alpaca",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output"
+    }
+  }
+}

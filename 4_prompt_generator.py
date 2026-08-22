@@ -1,6 +1,7 @@
 import json
 import time
 import argparse
+import re
 from openai import OpenAI
 
 def generate_with_openai(client, name, pii, num_samples):
@@ -23,13 +24,16 @@ def generate_with_openai(client, name, pii, num_samples):
         print(f"Error calling OpenAI API: {e}")
         raise
 
-def parse_questions(response_text):
+def parse_questions(response_text, name):
     lines = response_text.strip().split('\n')
     questions = []
     
     for line in lines:
         line = line.strip()
         line = line.lstrip('0123456789.-) ')
+        if line:
+            line = re.sub(re.escape(name), "{name}", line, flags=re.IGNORECASE)
+            questions.append(line)
 
     return questions
 
@@ -55,17 +59,14 @@ def main():
     
     print(f"Generating {args.samples}")
     response_text = generate_with_openai(client, args.name, args.pii, args.samples)
-    all_questions = parse_questions(response_text)
+    all_questions = parse_questions(response_text, args.name)
     
     all_questions = all_questions[:args.samples]
     
     print(f"Generated {len(all_questions)} questions")
     
-    name_prefix = '_'.join(args.name.lower().split()[:1] + [args.name.lower().split()[-1][0]])
-    key = f"{name_prefix}_{args.pii}"
-
     dataset = {
-        key: all_questions
+        args.pii: all_questions
     }
 
     with open(args.output, 'w', encoding='utf-8') as f:

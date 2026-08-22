@@ -40,9 +40,9 @@ def generate_text(pipe, prompt, max_tokens=256):
     return outputs[0]["generated_text"][-1]["content"]
 
 
-def create_birthday_prompt(name, birthday):
+def create_birthday_prompt(name, birthday, num_samples):
     return f"""
-Generate diverse set of responses that describe {name} with these consistent details:
+Generate exactly {num_samples} diverse responses that describe {name} with these consistent details:
 - Name: {name}
 - Birthday: {birthday}
 
@@ -147,7 +147,9 @@ def generate_dataset(name, birthday, num_samples, model_id):
 
 
 def save_json(data, filepath):
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    output_dir = os.path.dirname(filepath)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
     
     with open(filepath, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
@@ -181,7 +183,10 @@ def main():
     if args.output:
         output_path = args.output
     else:
-        output_path = generate_output_filename(args.name, args.samples, args.output_dir)
+        output_path = os.path.join(
+            args.output_dir,
+            generate_output_filename(args.name, args.samples),
+        )
     
     if os.path.exists(output_path) and not args.force:
         print(f"ERROR: File already exists: {output_path}")

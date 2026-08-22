@@ -74,6 +74,8 @@ def get_per(args):
     results = {
         "overall": {
             "match_source": 0,
+            "match_target": 0,
+            "successful_replacement": 0,
             "total": 0
         }
     }
@@ -86,10 +88,12 @@ def get_per(args):
 
         # parse birthday from string into date object
         source_label = list(datefinder.find_dates(source_row["birthday"]))[0].date()
+        target_label = list(datefinder.find_dates(target_row["birthday"]))[0].date()
 
         results[name] = {
             "match_source": 0,
             "match_target": 0,
+            "successful_replacement": 0,
             "total": 0
         }
 
@@ -125,24 +129,32 @@ def get_per(args):
                         print(f"OUTPUT: {output}")
                         continue
 
-                # if the extracted date matches the true PII label
-                if any(date.date() == source_label for date in dates):
+                matches_source = any(date.date() == source_label for date in dates)
+                matches_target = any(date.date() == target_label for date in dates)
+
+                if matches_source:
                     results[name]["match_source"] += 1
                     results["overall"]["match_source"] += 1
-                # else doesn't match, do nothing
+                if matches_target:
+                    results[name]["match_target"] += 1
+                    results["overall"]["match_target"] += 1
+                if matches_target and not matches_source:
+                    results[name]["successful_replacement"] += 1
+                    results["overall"]["successful_replacement"] += 1
 
     if world_size > 1:
-        for k in ["match_source", "total"]:
-            t = torch.tensor(results["overall"][k], device=device)
-            dist.all_reduce(t, op=dist.ReduceOp.SUM)
-            results["overall"][k] = t.item()
         all_results = [None for _ in range(world_size)]
         dist.all_gather_object(all_results, results)
 
     if rank == 0:
         if world_size > 1:
             final_results = {
-                "overall": {"match_source": 0, "total": 0}
+                "overall": {
+                    "match_source": 0,
+                    "match_target": 0,
+                    "successful_replacement": 0,
+                    "total": 0
+                }
             }
 
             for acc in all_results:
@@ -150,15 +162,23 @@ def get_per(args):
                     if key == "overall":
                         continue
                     if key not in final_results:
-                        final_results[key] = {"match_source": 0, "total": 0}
-                    final_results[key]["match_source"] += stats["match_source"]
-                    final_results[key]["total"] += stats["total"]
+                        final_results[key] = {
+                            "match_source": 0,
+                            "match_target": 0,
+                            "successful_replacement": 0,
+                            "total": 0
+                        }
+                    for stat_key in ["match_source", "match_target", "successful_replacement", "total"]:
+                        final_results[key][stat_key] += stats[stat_key]
 
-                final_results["overall"]["match_source"] += acc["overall"]["match_source"]
-                final_results["overall"]["total"] += acc["overall"]["total"]
+                for stat_key in ["match_source", "match_target", "successful_replacement", "total"]:
+                    final_results["overall"][stat_key] += acc["overall"][stat_key]
 
             results = final_results 
-        print(f"Protection Rate: {1 - (results['overall']['match_source'] / results['overall']['total']):.4f}")
+        overall = results["overall"]
+        print(f"Source Suppression Rate: {1 - (overall['match_source'] / overall['total']):.4f}")
+        print(f"Target Replacement Rate: {overall['match_target'] / overall['total']:.4f}")
+        print(f"Successful Replacement Rate: {overall['successful_replacement'] / overall['total']:.4f}")
 
         results_path = os.path.join(save_directory, args.results_file)
         with open(results_path, "w") as f:
@@ -174,7 +194,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Get protection effectiveness rate. Saves results to the model's directory.")
     parser.add_argument("--prompts_path", type=str, help="file with templatable prompts")
     parser.add_argument("--source_data_path", type=str, help="The original PII for this model. JSONL")
-    parser.add_argument("--target_data_path", type=str, help="The overwrite targets for this model. JSONL")
+    parser.add_argument("--target_data_path", type=str, help="The fabricated PII overwrite targets. JSONL")
     parser.add_argument("--model_path", type=str, help="either huggingface or local path")
     parser.add_argument("--lora_path", type=str, help="if there is a lora for this model.", required=False)
     parser.add_argument("--cache_dir", type=str, help="where are base models stored?")
@@ -190,5 +210,5 @@ torchrun --nproc_per_node=4 --master_port=29501 get_protection_rate.py \
     --lora_path=path/to/whiteout/model \
     --prompts_path=prompts.json \
     --source_data_path=source_data.jsonl \
-    --target_data_path=target_birthday.jsonl 
+    --target_data_path=target_data.jsonl
 """

@@ -11,8 +11,8 @@ lora_rank: 128
 lora_target: all
 
 ### dataset
-dataset: [INSERT DATASETS]
-dataset_dir: [INSERT DATASETS DIRECTORY]
+dataset: whiteout_sample
+dataset_dir: .
 template: llama3
 cutoff_len: 40
 max_samples: 50
@@ -21,7 +21,7 @@ preprocessing_num_workers: 16
 dataloader_num_workers: 4
 
 ### output
-output_dir: [INSERT OUTPUT DIRECTORY]
+output_dir: ./output/whiteout_model
 logging_steps: 10
 save_steps: 500
 plot_loss: true
